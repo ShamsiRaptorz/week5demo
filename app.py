@@ -1,6 +1,8 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 import pymysql
 from config import Config
+import os
+from flask import jsonify
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -18,6 +20,24 @@ def get_db_connection():
 @app.route('/')
 def index():
     return redirect(url_for('films'))
+@app.route('/db')
+def db_test():
+    try:
+        conn = pymysql.connect(
+            host=os.getenv('DB_HOST', 'localhost'),
+            port=int(os.getenv('DB_PORT', 3306)),
+            user=os.getenv('DB_USER', 'root'),
+            password=os.getenv('DB_PASS', 'rootpassword'),
+            database=os.getenv('DB_NAME', 'sakila'),
+            cursorclass=pymysql.cursors.DictCursor
+        )
+        with conn.cursor() as cur:
+            cur.execute("SELECT COUNT(*) AS count FROM actor")
+            result = cur.fetchone()
+        conn.close()
+        return jsonify({"status": "ok", "rows_in_actor": result["count"]})
+    except Exception as e:
+        return jsonify({"status": "error", "error": str(e)}), 500
 
 # Films Routes
 @app.route('/films')
